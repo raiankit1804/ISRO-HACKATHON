@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Simulation - Space Station Inventory{% endblock %}
+
+{% block content %}
+<div class="container-grid simulation-grid">
+    <!-- Time Simulation Section -->
+    <div class="card simulation-card">
+        <h3 class="card-title">Time Simulation</h3>
+        <form id="timeSimulationForm" class="simulation-form">
+            <div class="mb-4">
+                <label for="numberOfDays" class="form-label">Number of Days</label>
+                <input type="number" id="numberOfDays" class="form-control form-control-lg" min="1" required placeholder="Enter number of days">
+            </div>
+            <div class="mb-4">
+                <label for="itemsToUseDaily" class="form-label">Items to Use Daily</label>
+                <div class="input-group input-group-lg mb-2">
+                    <input type="text" id="itemsToUseDaily" class="form-control" placeholder="Item ID">
+                    <button type="button" class="btn btn-primary" onclick="addTimeItem()">Add Item</button>
+                </div>
+                <div id="selectedItems" class="selected-items mt-2"></div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100" id="runSimBtn">Run Simulation</button>
+        </form>
+    </div>
+
+    <!-- Quick Simulation Section -->
+    <div class="card simulation-card">
+        <h3 class="card-title">Quick Simulation</h3>
+        <form id="quickSimulationForm" class="simulation-form">
+            <div class="mb-4">
+                <label for="itemsToUseToday" class="form-label">Items to Use Today</label>
+                <div class="input-group input-group-lg mb-2">
+                    <input type="text" id="itemsToUseToday" class="form-control" placeholder="Item ID">
+                    <button type="button" class="btn btn-primary" onclick="addQuickItem()">Add Item</button>
+                </div>
+                <div id="todaySelectedItems" class="selected-items mt-2"></div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100" id="nextDayBtn">Next Day</button>
+        </form>
+    </div>
+
+    <!-- Simulation Status Section -->
+    <div class="card simulation-card">
+        <h3 class="card-title">Simulation Status</h3>
+        <div class="status-items">
+            <div class="status-item">
+                <span class="status-label">Total Items Used</span>
+                <span class="status-value" id="totalItemsUsed">0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Total Items Depleted</span>
+                <span class="status-value" id="totalItemsDepleted">0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Total Items Expired</span>
+                <span class="status-value" id="totalItemsExpired">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Simulation Reports Section -->
+    <div class="card simulation-card">
+        <h3 class="card-title">Daily Simulation Reports</h3>
+        <div id="dailySimulationReports" class="simulation-reports"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let simulationInProgress = false;
+let totalStats = {
+    itemsUsed: 0,
+    itemsDepleted: 0,
+    itemsExpired: 0
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('timeSimulationForm').addEventListener('submit', handleTimeSimulation);
+    document.getElementById('quickSimulationForm').addEventListener('submit', handleQuickSimulation);
+    updateSimulationStatus();
+});
+
+async function updateSimulationStatus() {
+    try {
+        const response = await fetch('/api/simulation/status');
+        if (!response.ok) {
+            throw new Error('Failed to fetch simulation status');
+        }
+        const data = await response.json();
+        document.getElementById('totalItemsUsed').textContent = data.totalItemsUsed || 0;
+        document.getElementById('totalItemsDepleted').textContent = data.totalItemsDepleted || 0;
+        document.getElementById('totalItemsExpired').textContent = data.totalItemsExpired || 0;
+        
+        // Update total stats
+        totalStats = {
+            itemsUsed: data.totalItemsUsed || 0,
+            itemsDepleted: data.totalItemsDepleted || 0,
+            itemsExpired: data.totalItemsExpired || 0
+        };
+    } catch (error) {
+        console.error('Error updating simulation status:', error);
+    }
+}
+
+function addTimeItem() {
+    const itemId = document.getElementById('itemsToUseDaily').value.trim();
+    if (!itemId) return;
+
+    const selectedItems = document.getElementById('selectedItems');
+    const itemElement = document.createElement('div');
+    itemElement.className = 'selected-item';
+    itemElement.dataset.itemId = itemId;
+    itemElement.innerHTML = `
+        ${itemId}
+        <span class="remove-item" onclick="this.parentElement.remove()">×</span>
+    `;
+    selectedItems.appendChild(itemElement);
+    document.getElementById('itemsToUseDaily').value = '';
+}
+
+function addQuickItem() {
+    const itemId = document.getElementById('itemsToUseToday').value.trim();
+    if (!itemId) return;
+
+    const selectedItems = document.getElementById('todaySelectedItems');
+    const itemElement = document.createElement('div');
+    itemElement.className = 'selected-item';
+    itemElement.dataset.itemId = itemId;
+    itemElement.innerHTML = `
+        ${itemId}
+        <span class="remove-item" onclick="this.parentElement.remove()">×</span>
+    `;
+    selectedItems.appendChild(itemElement);
+    document.getElementById('itemsToUseToday').value = '';
+}
+
+async function handleTimeSimulation(event) {
+    event.preventDefault();
+    if (simulationInProgress) return;
+
+    const button = document.getElementById('runSimBtn');
+    const numberOfDays = parseInt(document.getElementById('numberOfDays').value);
+    const selectedItems = Array.from(document.querySelectorAll('#selectedItems .selected-item'))
+        .map(item => ({ itemId: item.dataset.itemId }));
+
+    if (!numberOfDays || numberOfDays < 1) {
+        showAlert('Please enter a valid number of days', 'warning');
+        return;
+    }
+
+    if (selectedItems.length === 0) {
+        showAlert('Please select at least one item to simulate', 'warning');
+        return;
+    }
+
+    try {
+        button.disabled = true;
+        simulationInProgress = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Running...';
+
+        const response = await fetch('/api/simulate/day', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                numOfDays: numberOfDays,
+                itemsToBeUsedPerDay: selectedItems
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail?.message || 'Simulation failed');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+            updateSimulationResults(data);
+            showAlert('Simulation completed successfully', 'success');
+            await updateSimulationStatus(); // Refresh global stats
+        } else {
+            throw new Error(data.message || 'Unknown error occurred');
+        }
+    } catch (error) {
+        console.error('Error in simulation:', error);
+        showAlert(error.message, 'danger');
+    } finally {
+        button.disabled = false;
+        simulationInProgress = false;
+        button.innerHTML = 'Run Simulation';
+    }
+}
+
+async function handleQuickSimulation(event) {
+    event.preventDefault();
+    if (simulationInProgress) return;
+
+    const button = document.getElementById('nextDayBtn');
+    const selectedItems = Array.from(document.querySelectorAll('#todaySelectedItems .selected-item'))
+        .map(item => ({ itemId: item.dataset.itemId }));
+
+    if (selectedItems.length === 0) {
+        showAlert('Please select at least one item to simulate', 'warning');
+        return;
+    }
+
+    try {
+        button.disabled = true;
+        simulationInProgress = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+
+        const response = await fetch('/api/simulate/day', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                numOfDays: 1,
+                itemsToBeUsedPerDay: selectedItems
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail?.message || 'Simulation failed');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+            updateSimulationResults(data);
+            showAlert('Day simulated successfully', 'success');
+            await updateSimulationStatus(); // Refresh global stats
+        } else {
+            throw new Error(data.message || 'Unknown error occurred');
+        }
+    } catch (error) {
+        console.error('Error in simulation:', error);
+        showAlert(error.message, 'danger');
+    } finally {
+        button.disabled = false;
+        simulationInProgress = false;
+        button.innerHTML = 'Next Day';
+    }
+}
+
+function updateSimulationResults(data) {
+    const changes = data.changes;
+    
+    // Add daily report
+    const reportsContainer = document.getElementById('dailySimulationReports');
+    changes.dailyReports.forEach(report => {
+        const reportElement = document.createElement('div');
+        reportElement.className = 'simulation-report';
+        reportElement.innerHTML = `
+            <div class="report-header">
+                <span class="report-date">${new Date(report.date).toLocaleDateString()}</span>
+                <span class="report-time">${new Date(report.date).toLocaleTimeString()}</span>
+            </div>
+            <div class="report-content">
+                ${report.items.map(item => {
+                    let statusClass = '';
+                    switch(item.status) {
+                        case 'Depleted':
+                            statusClass = 'text-danger';
+                            break;
+                        case 'Expired':
+                            statusClass = 'text-warning';
+                            break;
+                        default:
+                            statusClass = 'text-info';
+                    }
+                    
+                    return `
+                        <p class="mb-2">
+                            <span class="item-name">${item.name} (${item.itemId})</span>
+                            <span class="${statusClass}">Status: ${item.status}</span>
+                            ${item.usesRemaining !== undefined ? 
+                                `<span class="uses-remaining">${item.usesRemaining} uses remaining</span>` 
+                                : ''}
+                            ${item.expiryDate ? 
+                                `<span class="expiry-date">Expires: ${new Date(item.expiryDate).toLocaleDateString()}</span>`
+                                : ''}
+                        </p>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        reportsContainer.insertBefore(reportElement, reportsContainer.firstChild);
+    });
+}
+
+function showAlert(message, type) {
+    const alertContainer = document.createElement('div');
+    alertContainer.className = `alert alert-${type} alert-dismissible fade show`;
+    alertContainer.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.container-grid').insertBefore(alertContainer, document.querySelector('.container-grid').firstChild);
+    setTimeout(() => alertContainer.remove(), 5000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}About - Space Station Inventory{% endblock %}
+
+{% block content %}
+<div class="heading">
+    <h2>About the Team</h2>
+    
+    <!-- Team Members Row -->
+    <div class="team-member-row">
+        <div class="team-member-col">
+            <div class="card about-card">
+                <img src="{{ url_for('static', path='/images/ankit.jpeg') }}" alt="Ankit Rai">
+                <h4>ANKIT RAI</h4>
+            </div>
+        </div>
+
+        <div class="team-member-col">
+            <div class="card about-card">
+                <img src="{{ url_for('static', path='/images/agnij.jpeg') }}" alt="Agnij Dutta">
+                <h4>AGNIJ DUTTA</h4>
+            </div>
+        </div>
+
+        <div class="team-member-col">
+            <div class="card about-card">
+                <img src="{{ url_for('static', path='/images/AJEET.jpeg') }}" alt="Ajeet Kumar">
+                <h4>AJEET KUMAR</h4>
+            </div>
+        </div>
+
+        <div class="team-member-col">
+            <div class="card about-card">
+                <img src="{{ url_for('static', path='/images/anjalee.png') }}" alt="Anjalee Chaudhury">
+                <h4>ANJALEE CHAUDHURY</h4>
+            </div>
+        </div>
+
+        <div class="team-member-col">
+            <div class="card about-card">
+                <img src="{{ url_for('static', path='/images/rahul.jpeg') }}" alt="Rahul Chakraborty">
+                <h4>RAHUL CHAKRABORTY</h4>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Add hover effects for team member cards
+    const cards = document.querySelectorAll('.about-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-5px) scale(1.03)';
+            card.style.boxShadow = '0 10px 25px rgba(0, 191, 255, 0.3)';
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = '';
+            card.style.boxShadow = '';
+        });
+    });
+});
+</script>
+{% endblock %}

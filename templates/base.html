@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Space Station Inventory{% endblock %}</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', path='/css/main.css') }}" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/images/favicon.jpg') }}">
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <img src="{{ url_for('static', path='/images/rock-splash.gif') }}" alt="Loading Animation" class="splash-logo">
+        <div class="loading-text">INITIALIZING SYSTEM...</div>
+    </div>
+
+    <!-- Space background -->
+    <div id="stars-container">
+        <div id="stars1"></div>
+        <div id="stars2"></div>
+        <div id="stars3"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="{{ url_for('static', path='/images/logo.gif') }}" alt="ISRO Logo" class="nav-logo">
+            <span class="brand-text">ARIS</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/inventory">Inventory</a></li>
+            <li><a href="/waste">Waste Management</a></li>
+            <li><a href="/simulation">Simulation</a></li>
+            <li><a href="/about">About</a></li>
+        </ul>
+        <div class="hamburger">
+            <div class="line line1"></div>
+            <div class="line line2"></div>
+            <div class="line line3"></div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div id="main-content" class="hidden">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div class="alert-container"></div>
+
+    <!-- JavaScript Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{{ url_for('static', path='/js/splash.js') }}"></script>
+    <script src="{{ url_for('static', path='/js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
